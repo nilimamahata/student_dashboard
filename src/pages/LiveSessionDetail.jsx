@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import api from "../api/apiClient";
 import ClassroomUI from "../components/live/ClassroomUI";
-import TeacherControls from "../components/TeacherControls";
+import TeacherControls from "../components/live/TeacherControls";
 
 export default function LiveSessionDetail() {
   const { id } = useParams();
