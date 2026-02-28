@@ -13,17 +13,39 @@ export default function QuizDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  // ================================
-  // FETCH QUIZ
-  // ================================
+  // ==========================================
+  // START QUIZ + FETCH QUIZ DATA
+  // ==========================================
   useEffect(() => {
     async function fetchQuiz() {
       try {
         setLoading(true);
         setError(null);
 
+        // 🔹 Start attempt first
+        try {
+          await api.post(`/quizzes/${quizId}/start/`);
+        } catch (startErr) {
+          const message = startErr.response?.data?.detail;
+
+          if (message === "Quiz already submitted.") {
+            navigate(`/subjects/quiz/result/${quizId}`);
+            return;
+          }
+
+          if (message === "Quiz expired.") {
+            setError("Quiz expired.");
+            return;
+          }
+
+          // Any other error → throw
+          throw startErr;
+        }
+
+        // 🔹 Fetch quiz details
         const res = await api.get(`/quizzes/${quizId}/`);
         setQuizData(res.data);
+
       } catch (err) {
         setError(
           err.response?.data?.detail || "Unable to load quiz."
@@ -36,11 +58,11 @@ export default function QuizDetail() {
     if (quizId) {
       fetchQuiz();
     }
-  }, [quizId]);
+  }, [quizId, navigate]);
 
-  // ================================
+  // ==========================================
   // HANDLE ANSWER
-  // ================================
+  // ==========================================
   const handleAnswerChange = (questionId, choiceId) => {
     setAnswers((prev) => ({
       ...prev,
@@ -48,9 +70,9 @@ export default function QuizDetail() {
     }));
   };
 
-  // ================================
-  // SUBMIT
-  // ================================
+  // ==========================================
+  // SUBMIT QUIZ
+  // ==========================================
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
@@ -77,14 +99,22 @@ export default function QuizDetail() {
     }
   };
 
-  // ================================
+  // ==========================================
   // STATES
-  // ================================
+  // ==========================================
   if (loading)
-    return <div className="quizDetailPage">Loading quiz...</div>;
+    return (
+      <div className="quizDetailPage">
+        <div className="quizDetailBox">Loading quiz...</div>
+      </div>
+    );
 
   if (error)
-    return <div className="quizDetailPage">{error}</div>;
+    return (
+      <div className="quizDetailPage">
+        <div className="quizDetailBox">{error}</div>
+      </div>
+    );
 
   if (!quizData) return null;
 
@@ -93,9 +123,9 @@ export default function QuizDetail() {
       (q) => answers[q.id] !== undefined
     ) ?? false;
 
-  // ================================
+  // ==========================================
   // RENDER
-  // ================================
+  // ==========================================
   return (
     <div className="quizDetailPage">
       <div className="quizDetailBox">
