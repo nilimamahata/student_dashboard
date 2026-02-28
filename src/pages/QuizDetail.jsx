@@ -5,7 +5,7 @@ import "../styles/quiz.css";
 
 export default function QuizDetail() {
   const navigate = useNavigate();
-  const { quizId } = useParams();
+  const { subjectId, quizId } = useParams();
 
   const [quizData, setQuizData] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -14,65 +14,47 @@ export default function QuizDetail() {
   const [error, setError] = useState(null);
 
   // ==========================================
-  // START QUIZ + FETCH QUESTIONS
+  // FETCH QUIZ QUESTIONS ONLY
   // ==========================================
   useEffect(() => {
-    async function loadQuiz() {
+    async function fetchQuiz() {
       try {
         setLoading(true);
         setError(null);
 
-        // 🔹 Try starting quiz
-        try {
-          await api.post(`/quizzes/${quizId}/start/`);
-        } catch (startErr) {
-          // If already started, ignore
-          const msg = startErr.response?.data?.detail;
-
-          if (
-            msg !== "Quiz already submitted." &&
-            msg !== "Quiz expired."
-          ) {
-            throw startErr;
-          }
-
-          if (msg === "Quiz already submitted.") {
-            navigate(`/subjects/quiz/result/${quizId}`);
-            return;
-          }
-
-          if (msg === "Quiz expired.") {
-            setError("Quiz expired.");
-            return;
-          }
-        }
-
-        // 🔹 Fetch quiz data
         const res = await api.get(`/quizzes/${quizId}/`);
         setQuizData(res.data);
 
       } catch (err) {
         console.error("Failed to load quiz:", err);
-        setError(
-          err.response?.data?.detail || "Unable to load quiz."
-        );
+
+        const message = err.response?.data?.detail;
+
+        // If already submitted → redirect to result
+        if (message === "Quiz expired.") {
+          setError("Quiz expired.");
+        } else if (message === "Quiz already submitted.") {
+          navigate(`/subjects/quiz/${subjectId}/result/${quizId}`);
+        } else {
+          setError(message || "Unable to load quiz.");
+        }
       } finally {
         setLoading(false);
       }
     }
 
     if (quizId) {
-      loadQuiz();
+      fetchQuiz();
     }
-  }, [quizId, navigate]);
+  }, [quizId, subjectId, navigate]);
 
   // ==========================================
   // HANDLE ANSWER CHANGE
   // ==========================================
-  const handleAnswerChange = (question_id, choice_id) => {
+  const handleAnswerChange = (questionId, choiceId) => {
     setAnswers((prev) => ({
       ...prev,
-      [question_id]: choice_id,
+      [questionId]: choiceId,
     }));
   };
 
@@ -85,9 +67,9 @@ export default function QuizDetail() {
       setError(null);
 
       const formattedAnswers = Object.entries(answers).map(
-        ([question_id, choice_id]) => ({
-          question: question_id,
-          selected_choice: choice_id,
+        ([questionId, choiceId]) => ({
+          question: questionId,
+          selected_choice: choiceId,
         })
       );
 
@@ -95,8 +77,8 @@ export default function QuizDetail() {
         answers: formattedAnswers,
       });
 
-      // 🔹 Navigate to result page (match your router)
-      navigate(`/subjects/quiz/result/${quizId}`);
+      // Navigate correctly with subjectId
+      navigate(`/subjects/quiz/${subjectId}/result/${quizId}`);
 
     } catch (err) {
       console.error("Submission failed:", err);
